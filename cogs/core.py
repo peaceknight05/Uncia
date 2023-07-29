@@ -35,6 +35,7 @@ class Core(commands.Cog):
 			conn.commit()
 			conn.close()
 			await ctx.respond("Match started!")
+			await ctx.channel.send(ctx.author.mention + "'s turn!")
 		else:
 			await ctx.respond("Match already ongoing!")
 
@@ -93,14 +94,16 @@ class Core(commands.Cog):
 			await message.add_reaction('\N{NEGATIVE SQUARED LATIN CAPITAL LETTER P}')
 			return
 
-		if fetch[1] is not None and message.clean_content[0] != fetch[1]:
+		word = message.clean_content.lower()
+
+		if fetch[1] is not None and word[0] != fetch[1]:
 			await message.add_reaction("\N{CROSS MARK}")
 			return
 
-		if self.bot.get_cog('Mechanics').define(message.clean_content)[0]:
+		if self.bot.get_cog('Mechanics').define(word)[0]:
 			res3 = cur.execute("""select *
 				from Turns
-				where MatchId = ?;""", (fetch[0],))
+				where MatchId = ? and Word = ?;""", (fetch[0], word))
 			if (res3.fetchone()) is not None:
 				await message.add_reaction("\N{ANTICLOCKWISE DOWNWARDS AND UPWARDS OPEN CIRCLE ARROWS}")
 				return
@@ -115,14 +118,20 @@ class Core(commands.Cog):
 			curr.execute("""update Matches
 				set PreviousTurn = ?, NextTurnId = NextTurnId % ? + 1, LastLetter = ?
 				where MatchId = ?;""",
-				(int(datetime.datetime.now().timestamp()), fetch2[0], message.clean_content[-1], fetch[0]))
-			curr.execute("update MatchPlayer set Points = Points + ?, NoWords = NoWords + 1",
-				(self.bot.get_cog('Mechanics').score(message.clean_content),))
+				(int(datetime.datetime.now().timestamp()), fetch2[0], word[-1], fetch[0]))
+			curr.execute("update MatchPlayer set Points = Points + ?, NoWords = NoWords + 1 where MatchId = ? and PlayerId = ?",
+				(self.bot.get_cog('Mechanics').score(word), fetch[0], fetch[2]))
 			curr.execute("insert into Turns (MatchId, PlayerId, TurnNo, Word) values (?, ?, ?, ?);",
-				(fetch[0], fetch[2], res4.fetchone()[0], message.clean_content))
+				(fetch[0], fetch[2], res4.fetchone()[0], word))
 			conn.commit()
 			conn.close()
 			await message.add_reaction("\N{WHITE HEAVY CHECK MARK}")
+			res5 = cur.execute("""select mp.PlayerId
+				from MatchPlayer mp, Match m
+				where mp.MatchId = m.MatchId and m.MatchId = ? and mp.PlayerNo = m.NextTurnId;""", (fetch[0],))
+			user = await self.bot.fetch_user(res5.fetchone()[0])
+			channel = await self.bot.fetch_channel(message.channel.id)
+			await channel.send(user.mention + "'s turn!")
 		else:
 			await message.add_reaction("\N{NO ENTRY SIGN}")
 
@@ -153,11 +162,22 @@ class Core(commands.Cog):
 				winner = await self.bot.fetch_user(fetch2[0][0])
 				await channel.send(f"{winner.mention} wins!")
 			else:
+				res2 = cur.execute("""select count(*)
+					from Matches m inner join MatchPlayer mp on m.MatchId = mp.MatchId
+					group by m.MatchId
+					having m.MatchId = ? and mp.PlayerNo is not null""", (match[0],))
 				cur.execute("""update Matches
-					set PreviousTurn = ?
+					set PreviousTurn = ?, NextTurnId = NextTurnId % ?
 					where MatchId = ?;""",
-					(int(datetime.datetime.now().timestamp()), match[0]))
-				await self.bot.fetch_channel(match[1]).send(self.bot.fetch_user(match[2]).mention + " was knocked out.")
+					(int(datetime.datetime.now().timestamp()), res2.fetchone()[0], match[0]))
+				user = await self.bot.fetch_user(match[2])
+				channel = await self.bot.fetch_channel(match[1])
+				await channel.send(user.mention + " was knocked out.")
+				res3 = cur.execute("""select mp.PlayerId
+					from MatchPlayer mp, Match m
+					where mp.MatchId = m.MatchId and m.MatchId = ? and mp.PlayerNo = m.NextTurnId;""", (match[0],))
+				user = await self.bot.fetch_user(res3.fetchone()[0])
+				await channel.send(user.mention + "'s turn!")
 			self.conOver.commit()
 
 	@tasks.loop(seconds=1.0)
