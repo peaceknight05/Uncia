@@ -10,6 +10,16 @@ The rules of Word Chain are:
 - The words must be valid words (and cannot be proper nouns).
 - Each new word after the first must start with the ending letter of the prior word.
 
+When a turn infringes on any of the aforementioned rules, the message will be reacted to with either:
+
+- 🚫 - Invalid word
+- ❌ - Wrong starting letter
+- 🔄 - Word already said
+- 🖐️ - Not your turn
+- 🖐️1️⃣🅿️ - Not enough players
+
+Otherwise, if the play is valid, the message will be reacted to with a checkmark.
+
 ## Features
 
 - Multiplayer matches

@@ -6,6 +6,9 @@ class Mechanics(commands.Cog):
 		self.bot = bot
 
 	def define(self, word):
+		if len(word.split()) != 1:
+			return (False, [])
+
 		r = requests.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}")
 		json = r.json()
 		return (valid:=(type(json)==list), [y for x in json for y in x["meanings"]] if valid else [])

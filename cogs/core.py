@@ -74,7 +74,7 @@ class Core(commands.Cog):
 		if res.fetchone() is None:
 			return
 
-		res = cur.execute("""select m.MatchId, m.LastLetter
+		res = cur.execute("""select m.MatchId, m.LastLetter, mp.PlayerId
 			from Matches m inner join MatchPlayer mp on m.MatchId = mp.MatchId and m.NextTurnId = mp.PlayerNo
 			where mp.PlayerId = ? and m.ChannelId = ? and m.Ongoing = true;""", (message.author.id, message.channel.id))
 		if (fetch:=res.fetchone()) is None:
@@ -98,6 +98,18 @@ class Core(commands.Cog):
 			return
 
 		if self.bot.get_cog('Mechanics').define(message.clean_content)[0]:
+			res3 = cur.execute("""select *
+				from Turns
+				where MatchId = ?;""", (fetch[0],))
+			if (res3.fetchone()) is not None:
+				await message.add_reaction("\N{ANTICLOCKWISE DOWNWARDS AND UPWARDS OPEN CIRCLE ARROWS}")
+				return
+
+			res4 = cur.execute("""select sum(NoWords)
+				from MatchPlayer
+				group by MatchId
+				having MatchId = ?;""", (fetch[0],))
+
 			conn = sqlite3.connect("database.db")
 			curr = conn.cursor()
 			curr.execute("""update Matches
@@ -106,6 +118,8 @@ class Core(commands.Cog):
 				(int(datetime.datetime.now().timestamp()), fetch2[0], message.clean_content[-1], fetch[0]))
 			curr.execute("update MatchPlayer set Points = Points + ?, NoWords = NoWords + 1",
 				(self.bot.get_cog('Mechanics').score(message.clean_content),))
+			curr.execute("insert into Turns (MatchId, PlayerId, TurnNo, Word) values (?, ?, ?, ?);",
+				(fetch[0], fetch[2], res4.fetchone()[0], message.clean_content))
 			conn.commit()
 			conn.close()
 			await message.add_reaction("\N{WHITE HEAVY CHECK MARK}")
