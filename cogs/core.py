@@ -70,7 +70,7 @@ class Core(commands.Cog):
 		if message.author.bot:
 			return
 
-		if message.clean_content[0] != ';':
+		if len(message.clean_content) == 0 or message.clean_content[0] != ';':
 			return
 
 		cur = self.con.cursor()
