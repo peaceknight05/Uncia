@@ -26,8 +26,8 @@ class Core(commands.Cog):
 		if res.fetchone() is None:
 			conn = sqlite3.connect("database.db")
 			curr = conn.cursor()
-			curr.execute("insert into Matches (ChannelId, NextTurnId, Ongoing, DatePlayed, Ranked, TimePlayed) values (?, ?, ?, ?, ?, ?)",
-				(ctx.channel_id, 1, True, datetime.date.today().strftime("%Y%m%d"), False, int(datetime.datetime.now().timestamp())))
+			curr.execute("insert into Matches (ChannelId, NextTurnId, Ongoing, DatePlayed, Ranked, TimePlayed, ServerId) values (?, ?, ?, ?, ?, ?, ?)",
+				(ctx.channel_id, 1, True, datetime.date.today().strftime("%Y%m%d"), False, int(datetime.datetime.now().timestamp()), ctx.guild_id))
 			match = curr.lastrowid
 			curr.execute("insert or ignore into Players (PlayerId, DateJoined) values (?, ?)", (ctx.author.id, datetime.date.today().strftime("%Y%m%d")))
 			curr.execute("insert into MatchPlayer (MatchId, PlayerId, PlayerNo, Points, NoWords, RankingChange) values (?,?,?,?,?,null);",
@@ -70,6 +70,9 @@ class Core(commands.Cog):
 		if message.author.bot:
 			return
 
+		if message.clean_content[0] != ';':
+			return
+
 		cur = self.con.cursor()
 		res = cur.execute("select * from Matches where ChannelId = ? and Ongoing = true;", (message.channel.id,))
 		if res.fetchone() is None:
@@ -94,7 +97,7 @@ class Core(commands.Cog):
 			await message.add_reaction('\N{NEGATIVE SQUARED LATIN CAPITAL LETTER P}')
 			return
 
-		word = message.clean_content.lower()
+		word = message.clean_content.lower()[1:]
 
 		if fetch[1] is not None and word[0] != fetch[1]:
 			await message.add_reaction("\N{CROSS MARK}")

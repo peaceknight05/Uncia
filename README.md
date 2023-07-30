@@ -20,6 +20,10 @@ When a turn infringes on any of the aforementioned rules, the message will be re
 
 Otherwise, if the play is valid, the message will be reacted to with a checkmark.
 
+If a valid word is not said within the next 10 seconds, the player gets knocked out.
+
+In order to submit a word for validation, start the word with a semicolon: `;example`
+
 ## Features
 
 - Multiplayer matches
