@@ -25,7 +25,7 @@ class Utils(commands.Cog):
 		meanings = self.bot.get_cog('Mechanics').define(w)[1]
 		if not len(meanings):
 			embed = discord.Embed(
-				title=w,
+				title=w.capitalize(),
 				description=f"\"{w}\" is not a valid word!",
 				color=0xFF8888
 			)

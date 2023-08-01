@@ -20,6 +20,7 @@ class Core(commands.Cog):
 		self.conOver.close()
 
 	@commands.slash_command(description="Starts a Word Chain match.")
+	@commands.guild_only()
 	async def start(self, ctx):
 		cur = self.con.cursor()
 		res = cur.execute("select * from Matches where ChannelId = ? and Ongoing = true;", (ctx.channel_id,))
@@ -53,6 +54,7 @@ class Core(commands.Cog):
 			await ctx.respond("Match already ongoing!")
 
 	@commands.slash_command(description="Join an ongoing game in the channel.")
+	@commands.guild_only()
 	async def join(self, ctx):
 		cur = self.con.cursor()
 		res = cur.execute("select MatchId from Matches where ChannelId = ? and Ongoing = true;", (ctx.channel.id,))
