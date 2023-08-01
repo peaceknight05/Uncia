@@ -55,7 +55,7 @@ class Utils(commands.Cog):
 
 	@commands.message_command(name="Get Word Definition")
 	async def get_word_definition(self, ctx, message: discord.Message):
-		m = message[1:] if len(message) > 1 and message[0] == ';' else message
+		m = message.clean_content[1:] if len(message.clean_content) > 1 and message.clean_content[0] == ';' else message.clean_content
 		await self.define(ctx, m, True)
 
 def setup(bot):

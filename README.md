@@ -53,3 +53,7 @@ Joins a match in a channel (the channel it is used in). Does nothing if there is
 ### /define
 
 Look up defintions of a word. (If there are too many definitions it may be truncated.)
+
+### Get Word Definition
+
+Message command to define a word that was played (semicolon optional). Right click a message with a word and select Apps, then Get Word Definition.
