@@ -49,3 +49,7 @@ Starts a match in a channel (the channel it is used in). Does nothing if there i
 ### /join
 
 Joins a match in a channel (the channel it is used in). Does nothing if there is not a match in the channel, or if the user is already in the match.
+
+### /define
+
+Look up defintions of a word. (If there are too many definitions it may be truncated.)

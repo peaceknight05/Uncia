@@ -34,8 +34,21 @@ class Core(commands.Cog):
 				(match, ctx.author.id, 1, 0, 0))
 			conn.commit()
 			conn.close()
-			await ctx.respond("Match started!")
-			await ctx.channel.send(ctx.author.mention + "'s turn!")
+			embed = discord.Embed(title="Match started!", fields=[
+				discord.EmbedField("Ranked", "No", inline=True),
+				discord.EmbedField("Time Control", "10 seconds", inline=True)
+			], color=0x88EE88,
+			timestamp=datetime.datetime.now())
+			embed.set_footer(text="Game will abort in 60 seconds if no second player joins.")
+			embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
+			await ctx.respond(embed=embed)
+			embed2 = discord.Embed(title=f"{ctx.author.display_name}'s turn!", fields=[
+				discord.EmbedField("Previous Word", "-")
+			], color=ctx.author.color,
+			timestamp=datetime.datetime.now())
+			embed2.set_footer(text="Turn 1")
+			embed2.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
+			await ctx.channel.send(embed=embed2)
 		else:
 			await ctx.respond("Match already ongoing!")
 
@@ -44,7 +57,14 @@ class Core(commands.Cog):
 		cur = self.con.cursor()
 		res = cur.execute("select MatchId from Matches where ChannelId = ? and Ongoing = true;", (ctx.channel.id,))
 		if (fetch:=res.fetchone()) is None:
-			await ctx.respond("There isn't an ongoing game in this channel.")
+			embed = discord.Embed(
+				title="Error",
+				description="There isn't an ongoing game in this channel.",
+				color=0xFF8888,
+				timestamp=datetime.datetime.now()
+			)
+			embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
+			await ctx.respond(embed=embed, ephemeral=True)
 			return
 
 		res2 = cur.execute("""select mp.PlayerId
@@ -53,7 +73,14 @@ class Core(commands.Cog):
 		players = [x[0] for x in res2.fetchall()]
 
 		if ctx.author.id in players:
-			await ctx.respond("You are already inside the game.")
+			embed = discord.Embed(
+				title="Error",
+				description="You are already inside the game.",
+				color=0xFF8888,
+				timestamp=datetime.datetime.now()
+			)
+			embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
+			await ctx.respond(embed=embed, ephemeral=True)
 			return
 
 		conn = sqlite3.connect("database.db")
@@ -63,7 +90,14 @@ class Core(commands.Cog):
 			(fetch[0], ctx.author.id, len(players) + 1, 0, 0))
 		conn.commit()
 		conn.close()
-		await ctx.respond("Joined.")
+		embed = discord.Embed(
+			title="Success",
+			description=f"{ctx.author.display_name} joined.",
+			color=0x88EE88,
+			timestamp=datetime.datetime.now()
+		)
+		embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
+		await ctx.respond(embed=embed)
 
 	@commands.Cog.listener()
 	async def on_message(self, message):
@@ -132,9 +166,20 @@ class Core(commands.Cog):
 			res5 = cur.execute("""select mp.PlayerId
 				from MatchPlayer mp, Match m
 				where mp.MatchId = m.MatchId and m.MatchId = ? and mp.PlayerNo = m.NextTurnId;""", (fetch[0],))
+			res6 = cur.execute("""select Word, TurnNo
+				from Turns
+				where MatchId = ?
+				order by TurnNo desc;""", (fetch[0],))
+			fetch6 = res6.fetchone()
 			user = await self.bot.fetch_user(res5.fetchone()[0])
 			channel = await self.bot.fetch_channel(message.channel.id)
-			await channel.send(user.mention + "'s turn!")
+			embed = discord.Embed(title=f"{user.display_name}'s turn!", fields=[
+				discord.EmbedField("Previous Word", fetch6[0])
+			], color=user.color,
+			timestamp=datetime.datetime.now())
+			embed.set_footer(text=f"Turn {fetch6[1]}")
+			embed.set_author(name=user.display_name, icon_url=user.display_avatar.url)
+			await channel.send(embed=embed)
 		else:
 			await message.add_reaction("\N{NO ENTRY SIGN}")
 
@@ -180,7 +225,18 @@ class Core(commands.Cog):
 					from MatchPlayer mp, Match m
 					where mp.MatchId = m.MatchId and m.MatchId = ? and mp.PlayerNo = m.NextTurnId;""", (match[0],))
 				user = await self.bot.fetch_user(res3.fetchone()[0])
-				await channel.send(user.mention + "'s turn!")
+				res4 = cur.execute("""select Word, TurnNo
+					from Turns
+					where MatchId = ?
+					order by TurnNo desc;""", (fetch[0],))
+				fetch4 = res4.fetchone()
+				embed = discord.Embed(title=f"{user.display_name}'s turn!", fields=[
+					discord.EmbedField("Previous Word", fetch4[0])
+				], color=user.color,
+				timestamp=datetime.datetime.now())
+				embed.set_footer(text=f"Turn {fetch4[1]}")
+				embed.set_author(name=user.display_name, icon_url=user.display_avatar.url)
+				await channel.send(embed=embed)
 			self.conOver.commit()
 
 	@tasks.loop(seconds=1.0)
